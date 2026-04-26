@@ -4,7 +4,7 @@ A fully dockerized central PostgreSQL template with internal Docker networking, 
 
 ## Project Structure
 
-- `docker-compose.yml`: main Postgres service definition
+- `compose.yaml`: main Postgres service definition
 - `db/init/`: SQL files executed on first database initialization
 - `db/backups/`: backup output directory
 - `scripts/`: operational bash scripts
@@ -33,6 +33,7 @@ A fully dockerized central PostgreSQL template with internal Docker networking, 
 ## Scripts
 
 All scripts are under `scripts/`.
+They auto-detect whether your system has `docker compose` or `docker-compose`.
 
 ### Create a new database
 
@@ -60,6 +61,7 @@ All scripts are under `scripts/`.
 
 - The Postgres service is attached to an internal Docker network (`internal: true`).
 - Port exposure is controlled via `.env` (`POSTGRES_PORT`).
+- Postgres image is configurable via `.env` (`POSTGRES_IMAGE`).
 - Database files are persisted in named volume `central_pg_data`.
 
 ## Initialization
