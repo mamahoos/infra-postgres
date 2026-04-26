@@ -1,0 +1,11 @@
+# Environment files
+.env
+
+# Database backups
+db/backups/*.sql
+db/backups/*.dump
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
