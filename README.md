@@ -2,7 +2,9 @@
 
 Dockerized PostgreSQL infrastructure with explicit configuration, operational scripts, and optional monitoring hooks.
 
-**Core:** PostgreSQL, healthcheck, named volume, backup/restore with GFS rotation.
+**Core:** PostgreSQL instance, healthcheck, named volume, backup/restore with GFS rotation.
+
+**Out of scope:** application databases, roles, passwords, and schema migrations — managed by consuming projects. See [docs/application-bootstrap.md](docs/application-bootstrap.md).
 
 **Optional:** extensions (PostGIS, pgvector), postgres-exporter, pgAdmin — enabled separately without bloating the default compose.
 
@@ -50,13 +52,14 @@ All scripts auto-detect `docker compose` vs `docker-compose`.
 
 | Script | Purpose |
 |--------|---------|
-| `./scripts/create-db.sh <name>` | Create a database |
-| `./scripts/create-user.sh <user> [password]` | Create or update a role |
-| `./scripts/backup.sh [db]` | Backup to `backups/daily/` + rotate |
+| `./scripts/create-db.sh <name>` | Create an empty database (idempotent) |
+| `./scripts/backup.sh [db]` | Backup to `backups/daily/` + prune expired dailies |
 | `./scripts/restore.sh <file> [db]` | Restore from any GFS tier |
-| `./scripts/rotate-backups.sh` | Run GFS rotation manually |
+| `./scripts/rotate-backups.sh` | Full GFS promotion (schedule via cron) |
 | `./scripts/psql.sh [db]` | Open psql in the container |
 | `./scripts/logs.sh [lines]` | Tail Postgres logs |
+
+Application roles and passwords are **not** managed here — see [docs/application-bootstrap.md](docs/application-bootstrap.md).
 
 See [docs/backup.md](docs/backup.md) and [docs/restore.md](docs/restore.md) for details.
 
@@ -84,6 +87,7 @@ Core compose does **not** include postgres-exporter. If you have Prometheus, use
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Application bootstrap](docs/application-bootstrap.md)
 - [Backup](docs/backup.md)
 - [Restore](docs/restore.md)
 

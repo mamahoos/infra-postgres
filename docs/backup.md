@@ -9,7 +9,13 @@
 
 Backups are written to `backups/daily/` as custom-format dumps (`pg_dump -Fc`).
 
-After each backup, `rotate-backups.sh` runs automatically to apply the GFS retention policy.
+After each backup, expired daily files are pruned. Schedule full GFS promotion separately:
+
+```cron
+0 3 * * 0 cd /path/to/infra-postgres && ./scripts/rotate-backups.sh
+```
+
+Weekly promotion runs on **Sundays**; monthly promotion on the **1st** of each month.
 
 ## GFS layout
 

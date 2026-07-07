@@ -24,4 +24,4 @@ compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$DB_NAME" -Fc -f "$OUTP
 
 echo "Backup created: backups/daily/$(basename "$OUTPUT_FILE")"
 
-"$SCRIPT_DIR/rotate-backups.sh"
+"$SCRIPT_DIR/rotate-backups.sh" --prune-daily

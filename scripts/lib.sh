@@ -47,6 +47,17 @@ compose() {
   "${DOCKER_COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" "$@"
 }
 
+# PostgreSQL identifiers: letters, digits, underscore; must not start with a digit.
+validate_identifier() {
+  local name="$1"
+  local label="${2:-identifier}"
+
+  if [[ ! "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    echo "Error: invalid $label '$name' (use [a-zA-Z_][a-zA-Z0-9_]*)" >&2
+    exit 1
+  fi
+}
+
 backup_tier_dir() {
   local tier="${1:-daily}"
   echo "$BACKUPS_DIR/$tier"
