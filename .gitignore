@@ -2,8 +2,9 @@
 .env
 
 # Database backups
-db/backups/*.sql
-db/backups/*.dump
+backups/**/*.dump
+backups/**/*.sql
+!backups/**/.gitkeep
 
 # OS/editor
 .DS_Store
