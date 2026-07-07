@@ -1,7 +1,7 @@
 services:
   postgres:
-    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
-    container_name: central-postgres
+    image: postgres:${POSTGRES_VERSION:-17}-alpine
+    container_name: infra-postgres
     restart: unless-stopped
     env_file:
       - .env
@@ -11,26 +11,35 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       TZ: ${TZ:-UTC}
     volumes:
-      - pg_data:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d:ro
-      - ./db/backups:/backups
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./postgres/healthcheck.sh:/healthcheck.sh:ro
+      - ./backups:/backups
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
     networks:
-      - central_db_net
+      - infra_db_net
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "sh /healthcheck.sh"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
 
 networks:
-  central_db_net:
-    name: central_db_net
+  infra_db_net:
+    name: infra_db_net
     driver: bridge
     internal: true
 
 volumes:
-  pg_data:
-    name: central_pg_data
+  postgres-data:
+    name: infra_postgres_data
