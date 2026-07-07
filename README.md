@@ -1,21 +1,37 @@
-# Central Postgres Template
+# infra-postgres
 
-A fully dockerized central PostgreSQL template with internal Docker networking, initialization support, and operational scripts for database creation, backup, and restore.
+Dockerized PostgreSQL infrastructure with explicit configuration, operational scripts, and optional monitoring hooks.
 
-## Project Structure
+**Core:** PostgreSQL instance, healthcheck, named volume, backup/restore with GFS rotation.
 
-- `compose.yaml`: main Postgres service definition
-- `db/init/`: SQL files executed on first database initialization
-- `db/backups/`: backup output directory
-- `scripts/`: operational bash scripts
-- `.env.example`: environment variable template
+**Out of scope:** application databases, roles, passwords, and schema migrations — managed by consuming projects. See [docs/application-bootstrap.md](docs/application-bootstrap.md).
 
-## Quick Start
+**Optional:** extensions (PostGIS, pgvector), postgres-exporter, pgAdmin — enabled separately without bloating the default compose.
+
+## Project structure
+
+```
+infra-postgres/
+├── compose.yaml
+├── .env.example
+├── postgres/
+│   ├── conf/           # postgresql.conf, pg_hba.conf
+│   ├── init/           # ordered SQL bootstrap
+│   │   └── optional/   # PostGIS, pgvector (manual opt-in)
+│   └── healthcheck.sh
+├── scripts/            # backup, restore, ops helpers
+├── backups/            # daily / weekly / monthly (gitignored)
+├── monitoring/         # exporter env (no service in core compose)
+└── docs/
+```
+
+## Quick start
 
 1. Copy environment file:
 
    ```bash
    cp .env.example .env
+   # Edit POSTGRES_PASSWORD and retention settings
    ```
 
 2. Start PostgreSQL:
@@ -32,46 +48,56 @@ A fully dockerized central PostgreSQL template with internal Docker networking, 
 
 ## Scripts
 
-All scripts are under `scripts/`.
-They auto-detect whether your system has `docker compose` or `docker-compose`.
+All scripts auto-detect `docker compose` vs `docker-compose`.
 
-### Create a new database
+| Script | Purpose |
+|--------|---------|
+| `./scripts/create-db.sh <name>` | Create an empty database (idempotent) |
+| `./scripts/backup.sh [db]` | Backup to `backups/daily/` + prune expired dailies |
+| `./scripts/restore.sh <file> [db]` | Restore from any GFS tier |
+| `./scripts/rotate-backups.sh` | Full GFS promotion (schedule via cron) |
+| `./scripts/psql.sh [db]` | Open psql in the container |
+| `./scripts/logs.sh [lines]` | Tail Postgres logs |
+
+Application roles and passwords are **not** managed here — see [docs/application-bootstrap.md](docs/application-bootstrap.md).
+
+See [docs/backup.md](docs/backup.md) and [docs/restore.md](docs/restore.md) for details.
+
+## Configuration
+
+- **Data:** Docker named volume `infra_postgres_data` (not bind-mounted)
+- **Config/init:** bind-mounted from `postgres/conf/` and `postgres/init/`
+- **Network:** internal bridge `infra_db_net` — port exposure via `POSTGRES_PORT`
+- **Version:** `POSTGRES_VERSION` in `.env` (default `17`)
+
+## Optional extensions
+
+Core init enables: `pgcrypto`, `citext`, `uuid-ossp`, `pg_stat_statements`.
+
+For PostGIS or pgvector, copy the desired file from `postgres/init/optional/` into `postgres/init/` **before the first container start**:
 
 ```bash
-./scripts/create-db.sh my_service_db
+cp postgres/init/optional/postgis.sql postgres/init/30-postgis.sql
 ```
 
-### Create a backup
+## Optional monitoring
 
-```bash
-./scripts/backup-db.sh
-# or
-./scripts/backup-db.sh my_service_db
-```
+Core compose does **not** include postgres-exporter. If you have Prometheus, use `monitoring/postgres-exporter.env` and add a separate `compose.monitoring.yaml` (future).
 
-### Restore from backup
+## Documentation
 
-```bash
-./scripts/restore-db.sh my_service_db_20260426_120000.dump
-# or with target db
-./scripts/restore-db.sh my_service_db_20260426_120000.dump my_service_db
-```
+- [Architecture](docs/architecture.md)
+- [Application bootstrap](docs/application-bootstrap.md)
+- [Backup](docs/backup.md)
+- [Restore](docs/restore.md)
 
-## Networking and Security Notes
+## Migration from central-postgres-template
 
-- The Postgres service is attached to an internal Docker network (`internal: true`).
-- Port exposure is controlled via `.env` (`POSTGRES_PORT`).
-- Postgres image is configurable via `.env` (`POSTGRES_IMAGE`).
-- Database files are persisted in named volume `central_pg_data`.
-
-## Initialization
-
-Put SQL bootstrap files in `db/init/`. They are executed only the first time the data directory is initialized.
-
-## Template Usage
-
-After creating repositories from this template:
-
-- update `.env.example`
-- add service-specific SQL in `db/init/`
-- extend `scripts/` based on your operational policies
+| Old | New |
+|-----|-----|
+| `db/init/` | `postgres/init/` |
+| `db/backups/` | `backups/daily/` |
+| `scripts/backup-db.sh` | `scripts/backup.sh` |
+| `scripts/restore-db.sh` | `scripts/restore.sh` |
+| `POSTGRES_IMAGE` | `POSTGRES_VERSION` |
+| volume `central_pg_data` | `infra_postgres_data` |

@@ -14,7 +14,16 @@ if [[ -z "$DB_NAME" ]]; then
   exit 1
 fi
 
-compose exec -T postgres psql -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 \
-  -c "CREATE DATABASE \"$DB_NAME\";"
+validate_identifier "$DB_NAME" "database name"
 
-echo "Database '$DB_NAME' created successfully."
+compose exec -T postgres psql -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 <<EOSQL
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${DB_NAME}') THEN
+    EXECUTE format('CREATE DATABASE %I', '${DB_NAME}');
+  END IF;
+END
+\$\$;
+EOSQL
+
+echo "Database '$DB_NAME' ready."

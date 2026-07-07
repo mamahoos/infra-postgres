@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
 COMPOSE_FILE="$ROOT_DIR/compose.yaml"
+BACKUPS_DIR="$ROOT_DIR/backups"
 DOCKER_COMPOSE_CMD=()
 
 load_env() {
@@ -13,6 +14,14 @@ load_env() {
     source "$ROOT_DIR/.env"
     set +a
   fi
+
+  POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
+  POSTGRES_USER="${POSTGRES_USER:-postgres}"
+  POSTGRES_DB="${POSTGRES_DB:-postgres}"
+  POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+  BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
+  BACKUP_RETENTION_WEEKS="${BACKUP_RETENTION_WEEKS:-4}"
+  BACKUP_RETENTION_MONTHS="${BACKUP_RETENTION_MONTHS:-12}"
 }
 
 require_compose() {
@@ -36,4 +45,45 @@ require_compose() {
 
 compose() {
   "${DOCKER_COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" "$@"
+}
+
+# PostgreSQL identifiers: letters, digits, underscore; must not start with a digit.
+validate_identifier() {
+  local name="$1"
+  local label="${2:-identifier}"
+
+  if [[ ! "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    echo "Error: invalid $label '$name' (use [a-zA-Z_][a-zA-Z0-9_]*)" >&2
+    exit 1
+  fi
+}
+
+backup_tier_dir() {
+  local tier="${1:-daily}"
+  echo "$BACKUPS_DIR/$tier"
+}
+
+find_backup_file() {
+  local name="$1"
+  local tier dir
+
+  if [[ "$name" == */* ]]; then
+    if [[ -f "$BACKUPS_DIR/$name" ]]; then
+      echo "$BACKUPS_DIR/$name"
+      return 0
+    fi
+    echo "Error: backup file not found: backups/$name" >&2
+    return 1
+  fi
+
+  for tier in daily weekly monthly; do
+    dir="$(backup_tier_dir "$tier")"
+    if [[ -f "$dir/$name" ]]; then
+      echo "$dir/$name"
+      return 0
+    fi
+  done
+
+  echo "Error: backup file not found in daily/, weekly/, or monthly/: $name" >&2
+  return 1
 }

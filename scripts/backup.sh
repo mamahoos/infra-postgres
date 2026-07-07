@@ -15,8 +15,13 @@ if [[ -z "$DB_NAME" ]]; then
 fi
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-OUTPUT_FILE="/backups/${DB_NAME}_${TIMESTAMP}.dump"
+DAILY_DIR="$(backup_tier_dir daily)"
+mkdir -p "$DAILY_DIR"
+
+OUTPUT_FILE="/backups/daily/${DB_NAME}_${TIMESTAMP}.dump"
 
 compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$DB_NAME" -Fc -f "$OUTPUT_FILE"
 
-echo "Backup created: db/backups/$(basename "$OUTPUT_FILE")"
+echo "Backup created: backups/daily/$(basename "$OUTPUT_FILE")"
+
+"$SCRIPT_DIR/rotate-backups.sh" --prune-daily
