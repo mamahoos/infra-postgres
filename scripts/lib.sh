@@ -19,9 +19,20 @@ load_env() {
   POSTGRES_USER="${POSTGRES_USER:-postgres}"
   POSTGRES_DB="${POSTGRES_DB:-postgres}"
   POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-  BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
-  BACKUP_RETENTION_WEEKS="${BACKUP_RETENTION_WEEKS:-4}"
-  BACKUP_RETENTION_MONTHS="${BACKUP_RETENTION_MONTHS:-12}"
+  BACKUP_ENABLED="${BACKUP_ENABLED:-false}"
+  BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
+  BACKUP_RETENTION_WEEKS="${BACKUP_RETENTION_WEEKS:-0}"
+  BACKUP_RETENTION_MONTHS="${BACKUP_RETENTION_MONTHS:-0}"
+}
+
+require_backup_enabled() {
+  local enabled
+  enabled="$(printf '%s' "${BACKUP_ENABLED}" | tr '[:upper:]' '[:lower:]')"
+  case "$enabled" in
+    true|1|yes) return 0 ;;
+  esac
+  echo "Backup is disabled (BACKUP_ENABLED=${BACKUP_ENABLED}). Set BACKUP_ENABLED=true in .env to use backup scripts." >&2
+  exit 1
 }
 
 require_compose() {

@@ -2,11 +2,11 @@
 
 Dockerized PostgreSQL infrastructure with explicit configuration, operational scripts, and optional monitoring hooks.
 
-**Core:** PostgreSQL instance, healthcheck, named volume, backup/restore with GFS rotation.
+**Core:** PostgreSQL instance, healthcheck, named volume.
 
 **Out of scope:** application databases, roles, passwords, and schema migrations — managed by consuming projects. See [docs/application-bootstrap.md](docs/application-bootstrap.md).
 
-**Optional:** extensions (PostGIS, pgvector), postgres-exporter, pgAdmin — enabled separately without bloating the default compose.
+**Optional:** backup/restore, extensions (PostGIS, pgvector), postgres-exporter, pgAdmin — enabled separately without bloating the default compose.
 
 ## Project structure
 
@@ -31,7 +31,7 @@ infra-postgres/
 
    ```bash
    cp .env.example .env
-   # Edit POSTGRES_PASSWORD and retention settings
+   # Edit POSTGRES_PASSWORD
    ```
 
 2. Start PostgreSQL:
@@ -53,15 +53,15 @@ All scripts auto-detect `docker compose` vs `docker-compose`.
 | Script | Purpose |
 |--------|---------|
 | `./scripts/create-db.sh <name>` | Create an empty database (idempotent) |
-| `./scripts/backup.sh [db]` | Backup to `backups/daily/` + prune expired dailies |
-| `./scripts/restore.sh <file> [db]` | Restore from any GFS tier |
-| `./scripts/rotate-backups.sh` | Full GFS promotion (schedule via cron) |
+| `./scripts/backup.sh [db]` | Optional — backup to `backups/daily/` + prune (requires `BACKUP_ENABLED=true`) |
+| `./scripts/restore.sh <file> [db]` | Optional — restore from a dump (requires `BACKUP_ENABLED=true`) |
+| `./scripts/rotate-backups.sh` | Optional — GFS promotion when weekly/monthly retention is set |
 | `./scripts/psql.sh [db]` | Open psql in the container |
 | `./scripts/logs.sh [lines]` | Tail Postgres logs |
 
 Application roles and passwords are **not** managed here — see [docs/application-bootstrap.md](docs/application-bootstrap.md).
 
-See [docs/backup.md](docs/backup.md) and [docs/restore.md](docs/restore.md) for details.
+See [docs/backup.md](docs/backup.md) and [docs/restore.md](docs/restore.md) for enabling and using backups.
 
 ## Configuration
 

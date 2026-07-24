@@ -7,15 +7,16 @@ source "$SCRIPT_DIR/lib.sh"
 
 require_compose
 load_env
+require_backup_enabled
 
 DUMP_ARG="${1:-}"
 TARGET_DB="${2:-${POSTGRES_DB:-}}"
 
 if [[ -z "$DUMP_ARG" || -z "$TARGET_DB" ]]; then
-  echo "Usage: $0 <backup_file_or_tier/path> [target_database]"
-  echo "Examples:"
-  echo "  $0 mydb_20260707_120000.dump"
-  echo "  $0 daily/mydb_20260707_120000.dump mydb"
+  echo "Usage: $0 <backup_file_or_tier/path> [target_database]" >&2
+  echo "Examples:" >&2
+  echo "  $0 mydb_20260707_120000.dump" >&2
+  echo "  $0 daily/mydb_20260707_120000.dump mydb" >&2
   exit 1
 fi
 

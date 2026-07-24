@@ -7,12 +7,14 @@ source "$SCRIPT_DIR/lib.sh"
 
 require_compose
 load_env
+require_backup_enabled
 
 DB_NAME="${1:-${POSTGRES_DB:-}}"
 if [[ -z "$DB_NAME" ]]; then
-  echo "Usage: $0 [database_name]"
+  echo "Usage: $0 [database_name]" >&2
   exit 1
 fi
+validate_identifier "$DB_NAME" "database name"
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DAILY_DIR="$(backup_tier_dir daily)"
@@ -25,3 +27,4 @@ compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$DB_NAME" -Fc -f "$OUTP
 echo "Backup created: backups/daily/$(basename "$OUTPUT_FILE")"
 
 "$SCRIPT_DIR/rotate-backups.sh" --prune-daily
+echo "Pruned expired daily backups (retention: ${BACKUP_RETENTION_DAYS} days)."

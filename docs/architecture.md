@@ -13,7 +13,7 @@
 | PostgreSQL instance & named volume | Application databases |
 | Cluster config (`postgresql.conf`, `pg_hba.conf`) | Application roles & passwords |
 | Core extensions (pgcrypto, citext, …) | App-specific extensions (PostGIS, pgvector) |
-| Backup / restore / rotation | Schema migrations & seed data |
+| Optional backup / restore scripts | Schema migrations & seed data |
 | Healthcheck & monitoring hooks | Bootstrap SQL per service |
 
 Application teams manage users and databases via their own repos (bootstrap SQL, migration tools, or IaC). See [application-bootstrap.md](application-bootstrap.md).
@@ -27,12 +27,13 @@ Application teams manage users and databases via their own repos (bootstrap SQL,
 | `postgres/conf/` | `postgresql.conf` and `pg_hba.conf` bind-mounted into the container |
 | `postgres/init/00-extensions.sql` | Core extensions only — runs once on empty data dir |
 | `postgres/healthcheck.sh` | Container health probe |
-| `scripts/` | Backup, restore, rotation, and generic ops helpers |
+| `scripts/` | Ops helpers (`create-db`, `psql`, `logs`; backup scripts are optional) |
 
 ## Optional (not in core compose)
 
 | Capability | How to enable |
 |------------|---------------|
+| Backup / restore | `BACKUP_ENABLED=true` in `.env` — see [backup.md](backup.md) |
 | PostGIS / pgvector | Copy from `postgres/init/optional/` into `postgres/init/` before first start |
 | postgres-exporter | `monitoring/postgres-exporter.env` + future `compose.monitoring.yaml` |
 | pgAdmin, scheduler, replication | Separate compose overlays (future) |
@@ -44,7 +45,7 @@ Host                          Container (infra-postgres)
 ────                          ───────────────────────────
 postgres/conf/        ──ro──►  /etc/postgresql/
 postgres/init/        ──ro──►  /docker-entrypoint-initdb.d/
-backups/              ──rw──►  /backups/
+backups/              ──rw──►  /backups/   (mount always present; unused unless backups enabled)
 [named volume]        ──rw──►  /var/lib/postgresql/data
 ```
 
@@ -68,7 +69,11 @@ Files in `postgres/init/optional/` are **not** executed automatically.
 
 Cluster-wide session defaults live in `postgresql.conf` (timezone, timeouts) — not per-database `ALTER DATABASE` in init SQL.
 
-## Backup layout (GFS)
+## Optional backup layout
+
+Default (personal): daily dumps only under `backups/daily/`, retention via `BACKUP_RETENTION_DAYS`.
+
+Advanced GFS (opt-in via weekly/monthly retention + cron):
 
 ```
 backups/
@@ -77,7 +82,8 @@ backups/
   monthly/   ← promoted on the 1st by rotate-backups.sh
 ```
 
+- Scripts require `BACKUP_ENABLED=true`
 - `backup.sh` prunes expired daily backups after each run
-- Full GFS promotion runs via `rotate-backups.sh` (schedule with cron)
+- Full GFS promotion runs via `rotate-backups.sh` when weekly/monthly retention is set
 
 Retention is configured via `.env`: `BACKUP_RETENTION_DAYS`, `BACKUP_RETENTION_WEEKS`, `BACKUP_RETENTION_MONTHS`.

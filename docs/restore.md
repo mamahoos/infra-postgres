@@ -1,5 +1,11 @@
 # Restore
 
+Restore requires backups to be enabled:
+
+```env
+BACKUP_ENABLED=true
+```
+
 ## Quick start
 
 ```bash
@@ -31,8 +37,8 @@ The script searches `backups/daily/`, `backups/weekly/`, and `backups/monthly/` 
 | Situation | Look in |
 |-----------|---------|
 | Today's failure | `backups/daily/` |
-| Failure from ~2 weeks ago | `backups/weekly/` |
-| Failure from months ago | `backups/monthly/` |
+| Failure from ~2 weeks ago | `backups/weekly/` (only if GFS is configured) |
+| Failure from months ago | `backups/monthly/` (only if GFS is configured) |
 
 ## Warning
 
